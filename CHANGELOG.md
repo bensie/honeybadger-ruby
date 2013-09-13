@@ -1,3 +1,9 @@
+## Honeybadger 1.8.1 (unreleased) ##
+
+* Allow API key to be overridden by notice.
+
+  *Joshua Wood*
+
 ## Honeybadger 1.8.0 ##
 
 * Report memory and load stats

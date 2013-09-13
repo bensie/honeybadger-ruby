@@ -97,6 +97,16 @@ class NoticeTest < Test::Unit::TestCase
     assert_equal 'asdf', notice.hostname
   end
 
+  should "default api key to configuration" do
+    notice = build_notice
+    assert_equal 'abc123def456', notice.api_key
+  end
+
+  should "set the api key" do
+    notice = build_notice({ :api_key => 'asdf' })
+    assert_equal 'asdf', notice.api_key
+  end
+
   context "custom fingerprint" do
     should "include nil fingerprint when no fingerprint is specified" do
       notice = build_notice
