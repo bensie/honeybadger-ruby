@@ -46,11 +46,6 @@ module Honeybadger
         Honeybadger.context.clear!
       end
 
-      framework_exception = env['rack.exception'] || env['sinatra.error']
-      if framework_exception
-        env['honeybadger.error_id'] = notify_honeybadger(framework_exception, env)
-      end
-
       response
     end
   end
