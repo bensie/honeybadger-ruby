@@ -82,11 +82,13 @@ module Honeybadger
     # System stats
     attr_reader :stats
 
+    # The api_key to use when sending notice (optional)
+    attr_reader :api_key
+
     def initialize(args)
       self.args         = args
       self.exception    = args[:exception]
       self.project_root = args[:project_root]
-      self.url          = args[:url] || rack_env(:url)
 
       self.notifier_name    = args[:notifier_name]
       self.notifier_version = args[:notifier_version]
@@ -114,8 +116,10 @@ module Honeybadger
         end
       end
 
+      self.url              = filter_url(args[:url] || rack_env(:url))
       self.hostname         = local_hostname
       self.stats            = Stats.all
+      self.api_key          = args[:api_key]
 
       self.source_extract_radius = args[:source_extract_radius] || 2
       self.source_extract        = extract_source_from_backtrace
@@ -143,6 +147,7 @@ module Honeybadger
     # Returns JSON representation of notice
     def as_json(options = {})
       {
+        :api_key => api_key,
         :notifier => {
           :name => notifier_name,
           :url => notifier_url,
@@ -231,7 +236,7 @@ module Honeybadger
       :environment_filters, :session_data, :project_root, :url, :ignore,
       :ignore_by_filters, :notifier_name, :notifier_url, :notifier_version,
       :component, :action, :cgi_data, :environment_name, :hostname, :stats, :context,
-      :source_extract, :source_extract_radius, :send_request_session
+      :source_extract, :source_extract_radius, :send_request_session, :api_key
 
     # Private: Arguments given in the initializer
     attr_accessor :args
@@ -291,7 +296,24 @@ module Honeybadger
       end
     end
 
-    # Private: Replaces the contents of params that match params_filters.
+    # Internal: Filters query parameters from URL
+    #
+    # url - String URL to filter
+    #
+    # Returns filtered String URL
+    def filter_url(url)
+      return nil unless url =~ /\S/
+
+      url = url.dup
+      url.scan(/&([^=]+)=([^&]+)/).each do |m|
+        next unless filter_key?(m[0])
+        url.gsub!(/#{m[1]}/, '[FILTERED]')
+      end
+
+      url
+    end
+
+    # Internal: Replaces the contents of params that match params_filters.
     # TODO: extract this to a different class
     def clean_params
       clean_unserializable_data_from(:parameters)
@@ -360,7 +382,11 @@ module Honeybadger
 
     def filter_key?(key)
       params_filters.any? do |filter|
-        key.to_s.eql?(filter.to_s)
+        if filter.is_a?(Regexp)
+          key.to_s =~ filter
+        else
+          key.to_s.eql?(filter.to_s)
+        end
       end
     end
 

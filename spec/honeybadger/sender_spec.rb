@@ -1,13 +1,19 @@
 require 'spec_helper'
 
 describe Honeybadger::Sender do
-  before(:each) { reset_config }
+  before { reset_config }
+  before do
+    stub_request(:post, /api\.honeybadger\.io\/v1\/notices/).to_return(:body => '{"id":"123"}')
+  end
+
+  it "it makes a single request when sending notices" do
+    Honeybadger.notify(RuntimeError.new('oops!'))
+    assert_requested :post, 'https://api.honeybadger.io/v1/notices/', :times => 1
+  end
 
   it "posts to Honeybadger when using an HTTP proxy" do
-    post = double()
-    http = double(:adapter     => nil,
-                  :url_prefix= => nil,
-                  :headers     => nil)
+    post = double(:headers => {})
+    http = stub_http
     http.stub(:post).and_yield(post).and_return(false)
 
     url = "http://api.honeybadger.io:80#{Honeybadger::Sender::NOTICES_URI}"
@@ -36,10 +42,30 @@ describe Honeybadger::Sender do
     expect(send_exception(:secure => false)).to be_nil
   end
 
-  it "logs missing API key and return nil" do
-    sender = build_sender(:api_key => nil)
-    sender.should_receive(:log).with(:error, /API key/)
-    expect(send_exception(:sender => sender, :secure => false)).to be_nil
+  describe '#api_key' do
+    context 'api_key is missing' do
+      it "logs missing API key and return nil" do
+        sender = build_sender(:api_key => nil)
+        sender.should_receive(:log).with(:error, /API key/)
+        expect(send_exception(:sender => sender, :secure => false)).to be_nil
+      end
+    end
+
+    context 'notice is a hash' do
+      it 'uses api_key from hash when present' do
+        sender = build_sender(:api_key => 'asdf')
+        send_exception(:sender => sender, :notice => { 'api_key' => 'zxcv' })
+        assert_requested :post, 'https://api.honeybadger.io/v1/notices/', :times => 1, :headers => { 'x-api-key' => 'zxcv' }
+      end
+    end
+
+    context 'notice is a Honeybadger::Notice' do
+      it 'uses api_key from notice when present' do
+        sender = build_sender(:api_key => 'asdf')
+        send_exception(:sender => sender, :notice => Honeybadger::Notice.new(:api_key => 'zxcv'))
+        assert_requested :post, 'https://api.honeybadger.io/v1/notices/', :times => 1, :headers => { 'x-api-key' => 'zxcv' }
+      end
+    end
   end
 
   it "logs success" do
@@ -123,7 +149,7 @@ describe Honeybadger::Sender do
       http = stub_http
       url = "http://api.honeybadger.io:80#{Honeybadger::Sender::NOTICES_URI}"
       uri = URI.parse(url)
-      post = double(:body= => nil)
+      post = double(:body= => nil, :headers => {})
       http.should_receive(:post).and_yield(post)
       post.should_receive(:url).with(uri.path)
       send_exception(:secure => false)
@@ -131,7 +157,7 @@ describe Honeybadger::Sender do
 
     it "post to the right path for ssl" do
       http = stub_http
-      post = double(:body= => nil)
+      post = double(:body= => nil, :headers => {})
       http.should_receive(:post).and_yield(post)
       post.should_receive(:url).with(Honeybadger::Sender::NOTICES_URI)
       send_exception(:secure => true)
@@ -142,7 +168,7 @@ describe Honeybadger::Sender do
 
       real_http = Faraday.new(:url => url)
       real_http.stub(:post => nil)
-      Faraday.stub(:new).and_yield(real_http)
+      Faraday.stub(:new).and_return(real_http)
 
       File.stub(:exist?).with(OpenSSL::X509::DEFAULT_CERT_FILE).and_return(false)
 
@@ -234,16 +260,5 @@ describe Honeybadger::Sender do
     notice = args.delete(:notice) || build_notice_data
     sender = args.delete(:sender) || build_sender(args)
     sender.send_to_honeybadger(notice)
-  end
-
-  def stub_http(options = {})
-    response = options[:response] || Faraday::Response.new(:status => 200)
-    response.stub(:body => options[:body] || '{"id":"1234"}')
-    http = double(:post => response,
-                :adapter => nil,
-                :url_prefix= => nil,
-                :headers => nil)
-    Faraday.stub(:new => http)
-    http
   end
 end

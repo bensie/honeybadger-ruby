@@ -4,8 +4,8 @@ Gem::Specification.new do |s|
   s.rubygems_version = '1.3.5'
 
   s.name              = 'honeybadger'
-  s.version           = '1.9.2'
-  s.date              = '2013-10-28'
+  s.version           = '1.9.4'
+  s.date              = '2013-11-13'
 
   s.summary     = 'Error reports you can be happy about.'
   s.description = 'Make managing application errors a more pleasant experience.'
@@ -19,22 +19,22 @@ Gem::Specification.new do |s|
   s.rdoc_options = ['--charset=UTF-8', '--markup tomdoc']
   s.extra_rdoc_files = %w[README.md MIT-LICENSE]
 
-  s.add_dependency('faraday')
+  s.add_dependency('faraday', '~> 0.7')
   s.add_dependency('json')
 
-  s.add_development_dependency('cucumber',          '~> 1.2.1')
-  s.add_development_dependency('rspec',             '~> 2.14.0')
-  s.add_development_dependency('fakeweb',           '~> 1.3.0')
-  s.add_development_dependency('sham_rack',         '~> 1.3.0')
-  s.add_development_dependency('capistrano')
+  s.add_development_dependency('cucumber',   '~> 1.2.1')
+  s.add_development_dependency('rspec',      '~> 2.14.0')
+  s.add_development_dependency('sham_rack',  '~> 1.3.0')
+  s.add_development_dependency('capistrano', '~> 2.0')
+  s.add_development_dependency('guard',      '~> 1.8.3')
+  s.add_development_dependency('guard-rspec')
   s.add_development_dependency('rake')
   s.add_development_dependency('sinatra')
   s.add_development_dependency('aruba')
   s.add_development_dependency('appraisal')
-  s.add_development_dependency('guard')
-  s.add_development_dependency('guard-rspec')
   s.add_development_dependency('fuubar')
   s.add_development_dependency('growl')
+  s.add_development_dependency('webmock')
 
   ## Leave this section as-is. It will be automatically generated from the
   ## contents of your Git repository via the gemspec task. DO NOT REMOVE

@@ -1,4 +1,5 @@
 require 'faraday'
+require 'timeout'
 require 'json'
 require 'digest'
 require 'logger'
@@ -9,11 +10,12 @@ require 'honeybadger/notice'
 require 'honeybadger/rack'
 require 'honeybadger/sender'
 require 'honeybadger/stats'
+require 'honeybadger/user_informer'
 
 require 'honeybadger/railtie' if defined?(Rails::Railtie)
 
 module Honeybadger
-  VERSION = '1.9.2'
+  VERSION = '1.9.4'
   LOG_PREFIX = "** [Honeybadger] "
 
   HEADERS = {

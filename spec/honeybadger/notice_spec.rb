@@ -95,6 +95,16 @@ describe Honeybadger::Notice do
     expect(notice.hostname).to eq 'asdf'
   end
 
+  it "defaults api key to configuration" do
+    notice = build_notice
+    expect(notice.api_key).to eq 'abc123def456'
+  end
+
+  it "sets the api key" do
+    notice = build_notice({ :api_key => 'asdf' })
+    expect(notice.api_key).to eq 'asdf'
+  end
+
   context "custom fingerprint" do
     it "includes nil fingerprint when no fingerprint is specified" do
       notice = build_notice
@@ -303,6 +313,56 @@ describe Honeybadger::Notice do
     assert_filters_hash(:session_data)
   end
 
+  describe 'url' do
+    let(:params_filters) { [] }
+    let(:notice) { build_notice(:params_filters => params_filters, :url => url) }
+
+    context 'filtered params in query' do
+      let(:params_filters) { [:bar] }
+      let(:url) { 'https://www.honeybadger.io/?foo=1&bar=2&baz=3' }
+
+      it 'filters query' do
+        expect(notice.url).to eq 'https://www.honeybadger.io/?foo=1&bar=[FILTERED]&baz=3'
+      end
+    end
+
+    context 'malformed query' do
+      let(:url) { 'https://www.honeybadger.io/?foobar12' }
+
+      it 'maintains query' do
+        expect(notice.url).to eq url
+      end
+    end
+
+    context 'no query' do
+      let(:url) { 'https://www.honeybadger.io' }
+
+      it 'keeps original URL' do
+        expect(notice.url).to eq url
+      end
+    end
+
+    context 'malformed url' do
+      let(:url) { 'http s ! honeybadger' }
+
+      before do
+        expect { URI.parse(url) }.to raise_error
+      end
+
+      it 'keeps original URL' do
+        expect(notice.url).to eq url
+      end
+    end
+
+    context 'complex url' do
+      let(:url) { 'https://foo:bar@www.honeybadger.io:123/asdf/?foo=1&bar=2&baz=3' }
+
+      it 'keeps original URL' do
+        expect(notice.url).to eq url
+      end
+    end
+  end
+
   it "removes rack.request.form_vars" do
     original = {
       "rack.request.form_vars" => "story%5Btitle%5D=The+TODO+label",
@@ -433,6 +493,13 @@ describe Honeybadger::Notice do
     notice[:request][:context].should be_nil
   end
 
+  it "allows falsey values in context" do
+    Honeybadger.context({ :debuga => true, :debugb => false })
+    notice = build_notice
+    hash = JSON.parse(notice.to_json)
+    expect(hash['request']['context']).to eq({ 'debuga' => true, 'debugb' => false })
+  end
+
   it "ensures #to_hash is called on objects that support it" do
     expect { build_notice(:session => { :object => double(:to_hash => {}) }) }.not_to raise_error
   end
@@ -552,14 +619,20 @@ describe Honeybadger::Notice do
   end
 
   def assert_filters_hash(attribute)
-    filters  = ["abc", :def]
+    filters  = ["abc", :def, /private/, /^foo_.*$/]
     original = { 'abc' => "123", 'def' => "456", 'ghi' => "789", 'nested' => { 'abc' => '100' },
-      'something_with_abc' => 'match the entire string'}
+      'something_with_abc' => 'match the entire string', 'private_param' => 'prra',
+      'foo_param' => 'bar', 'not_foo_param' => 'baz', 'nested_foo' => { 'foo_nested' => 'bla'} }
     filtered = { 'abc'    => "[FILTERED]",
                  'def'    => "[FILTERED]",
                  'something_with_abc' => "match the entire string",
                  'ghi'    => "789",
-                 'nested' => { 'abc' => '[FILTERED]' } }
+                 'nested' => { 'abc' => '[FILTERED]' },
+                 'private_param' => '[FILTERED]',
+                 'foo_param' => '[FILTERED]',
+                 'not_foo_param' => 'baz',
+                 'nested_foo' => { 'foo_nested' => '[FILTERED]'}
+    }
 
     notice = build_notice(:params_filters => filters, attribute => original)
 

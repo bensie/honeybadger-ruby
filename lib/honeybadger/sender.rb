@@ -27,7 +27,7 @@ module Honeybadger
 
     # Public: Sends the notice data off to Honeybadger for processing.
     #
-    # notice - The notice data to be sent (Hash or JSON string)
+    # notice - The notice to be sent (Notice, Hash or JSON string)
     #
     # Returns error id from successful response
     def send_to_honeybadger(notice)
@@ -36,7 +36,7 @@ module Honeybadger
         return nil
       end
 
-      return nil unless api_key_ok?
+      api_key = api_key_ok?(!notice.is_a?(String) && notice['api_key']) or return nil
 
       data = notice.is_a?(String) ? notice : notice.to_json
 
@@ -44,6 +44,7 @@ module Honeybadger
                    client.post do |p|
                      p.url NOTICES_URI
                      p.body = data
+                     p.headers.merge!({ 'X-API-Key' => api_key})
                    end
                  rescue *HTTP_ERRORS => e
                    log(:error, "Unable to contact the Honeybadger server. HTTP Error=#{e}")
@@ -100,12 +101,14 @@ module Honeybadger
 
     private
 
-    def api_key_ok?
-      if api_key.nil? || api_key == ''
+    def api_key_ok?(api_key = nil)
+      api_key ||= self.api_key
+      unless api_key =~ /\S/
         log(:error, "API key not found.")
         return nil
       end
-      true
+
+      api_key
     end
 
     def proxy_options
@@ -119,8 +122,11 @@ module Honeybadger
     end
 
     def client
-      @client ||= Faraday.new(:request => request_options, :proxy => proxy_options) do |conn|
-        conn.adapter Faraday.default_adapter
+      @client ||= Faraday.new(:request => request_options, :proxy => proxy_options).tap do |conn|
+        conn.build do |builder|
+          builder.adapter Faraday.default_adapter
+        end
+
         conn.url_prefix = "#{protocol}://#{host}:#{port}"
         conn.headers['User-agent'] = "HB-Ruby #{Honeybadger::VERSION}; #{RUBY_VERSION}; #{RUBY_PLATFORM}"
         conn.headers['X-API-Key'] = api_key.to_s

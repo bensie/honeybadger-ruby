@@ -523,6 +523,20 @@ Honeybadger.configure do |config|
 end
 ```
 
+You can also add a regex to filter out sensitive parameters:
+
+```ruby
+Honeybadger.configure do |config|
+  config.api_key      = '1234567890abcdef'
+  config.params_filters << /credit_card_number/
+end
+```
+
+This is especially useful when your request parameters sometimes include search keys like
+'credit_card_number_begins_with', 'credit_card_matches', etc. to exclude a whole class of parameters.
+
+The param values for 'password' and 'password_confirmation' are always filtered out by default.
+
 Note that, when rescuing exceptions within an ActionController method,
 honeybadger will reuse filters specified by #filter_parameter_logging.
 
@@ -575,6 +589,37 @@ Honeybadger.configure do |config|
   config.proxy_port = 4038
   config.proxy_user = 'foo' # optional
   config.proxy_pass = 'bar' # optional
+end
+```
+
+## User Informer
+
+When an error is sent to Honeybadger, our API returns a unique UUID for
+the occurrence within your project. This UUID can be automatically
+displayed for reference on Rails error pages (e.g. `public/500.html`) or
+any rack output by including the `Honeybadger::UserInformer` middleware.
+
+To include this output, you must reference a special tag within your
+document or response body:
+
+```html
+<!-- HONEYBADGER ERROR -->
+```
+
+By default, we will replace this tag with:
+
+```
+Honeybadger Error {{error_id}}
+```
+
+Where `{{error_id}}` is the UUID. You can customize this output by
+overriding the `user_information` option in your Honeybadger
+initializer:
+
+```ruby
+Honeybadger.configure do |config|
+  # ...
+  config.user_information = "Error ID: {{error_id}}"
 end
 ```
 

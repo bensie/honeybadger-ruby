@@ -1,6 +1,40 @@
+## Honeybadger 1.10.0 (unreleased) ##
+
+* Added params filtering by regex
+
+  *Octavian Neamtu*
+
+* Bring back the UserInformer
+
+  *Joshua Wood*
+
+* Allow API key to be overridden by notice.
+
+  *Joshua Wood*
+
+* Filter query strings.
+
+  *Joshua Wood*
+
+## Honeybadger 1.9.4 ##
+
+* Fix bug where Faraday was getting a duplicate adapter when building
+  client.
+
+  *Joshua Wood*
+
+## Honeybadger 1.9.3 ##
+
+* Lock gemspec to faraday ~>0.7 to fix yield discrepancy between 0.7 and
+  0.8.
+
+  *Joshua Wood*
+
 ## Honeybadger 1.9.2 ##
 
 * Fix bug causing Honeybadger#Sender to omit proxy configuration.
+
+  *Joshua Wood*
 
 ## Honeybadger 1.9.0 ##
 
